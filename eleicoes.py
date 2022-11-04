@@ -11,10 +11,11 @@ y = pd.read_csv('y.csv')
 candidatos = pd.read_csv('num_nome.csv')
 nomes = np.array(candidatos['NM_CANDIDATO'])
 nomes = np.insert(nomes, 0, '')
-status = {0:'#NULO#', 1:'ELEITO POR MÉDIA', 2:'ELEITO POR QP', 3:'NÃO ELEITO', 4:'SUPLENTE'}
-
+status = {0:'NÃO ELEITO', 1:'ELEITO', 2:'ELEITO', 3:'NÃO ELEITO', 4:'SUPLENTE'} 
+#status corretos {0:'#NULO#', 1:'ELEITO POR MÉDIA', 2:'ELEITO POR QP', 3:'NÃO ELEITO', 4:'SUPLENTE'}. O utilizado é para atender ao enunciado
 #Função buscar resultado
 def getResult(candidato):
+    resultado = 0
     cand = np.array(candidato).reshape(-1,1)   
     scaler = MinMaxScaler(feature_range = (0, 1))    
     candidato = scaler.fit_transform(cand)     
@@ -35,6 +36,7 @@ def rna_mlp():
 
 #NM_PARTIDO	NR_IDADE_DATA_POSSE	DS_GENERO	DS_GRAU_INSTRUCAO	DS_COR_RACA	VR_RECEITA	VR_DESPESA_CONTRATADA
 #WEB APP
+st.set_page_config('Previsão de eleição. Por: Felipe Muros')
 modelo = rna_mlp()
 st.title("Previsão de eleição de vereador em Campos dos Goytacazes RJ")
 raca_opt = ['NÃO INFORMADO','PARDA', 'BRANCA', 'PRETA', 'INDÍGENA', 'AMARELA']
@@ -79,6 +81,9 @@ if submitted:
     cand_encoded = candidato.to_numpy()
     st.text('Com os dados inseridos, a previsão é que o candidato seria:')
     st.text(getResult(cand_encoded))
+    
+   
+    
 
 
      
