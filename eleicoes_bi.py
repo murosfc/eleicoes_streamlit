@@ -78,6 +78,8 @@ df_canditado_mun = candidatos.drop(candidatos[candidatos.NM_UE != municipio].ind
 df_canditado_mun = df_canditado_mun.drop(df_canditado_mun[df_canditado_mun.CD_CARGO != cargo].index) # Canditados a vereador
 df_canditado_mun.head()
 
+df_canditado_mun['DS_GRAU_INSTRUCAO'].unique()
+
 df_receita_mun = receitas.drop(receitas[receitas.NM_UE != municipio].index)# receitas de Canditados de Campos
 df_receita_mun = df_receita_mun.drop(df_receita_mun[df_receita_mun.CD_CARGO != cargo].index)# receitas de Canditados a Vereador
 df_receita_mun
@@ -158,26 +160,20 @@ grafico.show()
 
 df.info()
 
-"""Os dados a seguir são iguais a todos os cadidados e não farão parte dos valores de X.
+"""Os dados informados no enunciado para uso na previsão são:
+Idade,
+Sexo,
+Valor de Despesa,
+Valor de receita,
+Raça,
+Partido,
+Escolaridade.
 
-SG_UE e NM_UE são os campos que definem a cidade, como todos são iguais (CAMPOS DOS GOYTACAZES); 
-
-CD_CARGO e DS_CARGO são os campos que definem a função vereador.
-
-NM_CANDIDATO, NR_CPF_CANDIDATO, NM_EMAIL  são campos que não interferem nos resultados da eleição;
-
-Trataremos os dados das colunas com encoders: TP_AGREMIACAO; DS_COMPOSICAO_COLIGACAO; DS_GENERO; DS_GRAU_INSTRUCAO; DS_ESTADO_CIVIL; DS_COR_RACA; DS_OCUPACAO; e DS_SIT_TOT_TURNO
+Assim os demais serão excluídos 
 """
 
-new_df = df.drop(['SG_UE', 'NM_UE',  'CD_CARGO', 'DS_CARGO', 'NM_CANDIDATO', 'NR_CPF_CANDIDATO', 'NM_EMAIL'], axis=1)
-
-df['TP_AGREMIACAO'].unique() # TP_AGREMIACAO todos canditados possuem o mesmo valor. Descartaremos essa coluna
-
-new_df = new_df.drop(['TP_AGREMIACAO'], axis=1)
-
-#NR_PARTIDO é representada pela coluna com inteiros NM_PARTIDO, podemos descartá-la
-#Como os números de partidos não são sequenciados, vamos utilizar o nome para depois utilizar um encoder e convertê-los em número
-new_df = new_df.drop(['NR_PARTIDO'], axis=1)
+new_df = df.drop(['SG_UE', 'NM_UE',  'CD_CARGO', 'DS_CARGO', 'NM_CANDIDATO', 'NR_CPF_CANDIDATO','NR_CANDIDATO',
+                  'NM_EMAIL', 'TP_AGREMIACAO', 'NR_PARTIDO', 'DS_COMPOSICAO_COLIGACAO', 'CD_NACIONALIDADE', 'DS_ESTADO_CIVIL', 'DS_OCUPACAO'], axis=1)
 
 new_df.info()
 
@@ -214,7 +210,7 @@ X = x_df
 """# Divisão das bases em treinamento e teste"""
 
 from sklearn.model_selection import train_test_split
-X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.25,random_state=0)
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.20,random_state=101)
 X_train
 
 scalerTrain = MinMaxScaler(feature_range = (0, 1))
@@ -229,7 +225,7 @@ X_test
 """# Construção e treinamento RNA (MLP)"""
 
 from sklearn.neural_network import MLPClassifier
-modelo = MLPClassifier(verbose = True, hidden_layer_sizes=(12,12), max_iter = 10000)
+modelo = MLPClassifier(verbose = True, hidden_layer_sizes=(14,14), max_iter = 10000)
 modelo.fit(X_train, y_train)
 
 """## Previsões"""
@@ -240,28 +236,36 @@ previsoes
 print("Acurácia = {:.2f}".format(accuracy_score(y_test, previsoes)*100),"%")
 
 #simulando os dados de um novo canditado para testes
-canditado_novo = np.array([[13123, 5, 5, 1, 39, 1, 3, 2, 1, 32, 10000, 100000]])
+# NM_PARTIDO,	NR_IDADE_DATA_POSSE,	DS_GENERO,	DS_GRAU_INSTRUCAO,	DS_COR_RACA,	VR_RECEITA,	VR_DESPESA_CONTRATADA
+canditado_novo = np.array([[5, 39, 1, 2, 2, 10000, 100000]]).reshape(-1,1)
 
 #normalizando os dados
 scaler = MinMaxScaler(feature_range = (0, 1))
-canditado_novo = scalerTrain.fit_transform(canditado_novo)
+canditado_novo = scaler.fit_transform(canditado_novo)
+canditado_novo = canditado_novo.reshape(1,7)
 
+status = {0:'#NULO#', 1:'ELEITO POR MÉDIA', 2:'ELEITO POR QP', 3:'NÃO ELEITO', 4:'SUPLENTE'}
 situacao = modelo.predict(canditado_novo)
-situacao #A previsão 4 = SUPLENTE
+print("O status do canditado é:" ,status[int(situacao)])
+
+X_test.shape
 
 """# Construção e treinamento do modelo LSTM"""
 
-# LSTM,  softmax como função de ativação e dropout de 20%
-embed_dim = 64
-max_fatures = 1000
-lstm_out = 10
+#adequando o shape de X para compatibilidade com o LSTM
+X_train = X_train.reshape(-1, 1, 7)
+X_test  = X_test.reshape(-1, 1, 7)
 
+#criando o modelo com 1 camada de entrada, mais 2 camadas profundas e uma camada de saída. Dropout de 0.2
+neuronios = 7
 model = Sequential()
-model.add(Embedding(max_fatures, embed_dim, input_length = X.shape[1]))
-model.add(SpatialDropout1D(0.2))
-model.add(LSTM(lstm_out, dropout=0.2, recurrent_dropout=0.2))
+model.add(LSTM(units = neuronios, return_sequences = True, input_shape = (1, 7)))
 model.add(Dropout(0.2))
-model.add(Dense(1,activation='softmax'))
+model.add(LSTM(units = neuronios, return_sequences = True))
+model.add(Dropout(0.2))
+model.add(LSTM(units = neuronios))
+model.add(Dropout(0.2))
+model.add(Dense(units = 1))
 model.compile(loss = 'mean_squared_error', optimizer='adam',metrics = ['accuracy'])
 print(model.summary())
 
@@ -284,6 +288,21 @@ print("acc: %.2f" % (acc))
 
 trainPredict = model.predict(X_train)
 testPredict = model.predict(X_test)
-testPredict
+trainPredict
 
-trainPredict[0]
+# Inverte as previsões por conta da normalização
+trainPredict = scaler.inverse_transform(trainPredict)
+trainY = scaler.inverse_transform([y_train])
+testPredict = scaler.inverse_transform(testPredict)
+testY = scaler.inverse_transform([y_test])
+trainPredict
+
+"""## Calcula o RMSE"""
+
+import math
+from sklearn.metrics import mean_squared_error
+
+trainScore = math.sqrt(mean_squared_error(trainY[0], trainPredict[:,0]))
+print('Score em Treino: %.2f RMSE' % (trainScore))
+testScore = math.sqrt(mean_squared_error(testY[0], testPredict[:,0]))
+print('Score em Teste: %.2f RMSE' % (testScore))
