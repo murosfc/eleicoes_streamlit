@@ -38,7 +38,7 @@ def rna_mlp():
 #WEB APP
 st.set_page_config('Previsão de eleição. Por: Felipe Muros')
 modelo = rna_mlp()
-st.title("Previsão de eleição de vereador em Campos dos Goytacazes RJ")
+st.title("Previsão de eleição de vereador em Campos dos Goytacazes - RJ")
 raca_opt = ['NÃO INFORMADO','PARDA', 'BRANCA', 'PRETA', 'INDÍGENA', 'AMARELA']
 partido_opt = ['PATRIOTA', 'PARTIDO SOCIAL DEMOCRÁTICO',
        'PARTIDO REPUBLICANO DA ORDEM SOCIAL',
