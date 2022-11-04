@@ -66,7 +66,7 @@ with st.sidebar.form(key ='Form1'):
     partido = st.sidebar.selectbox('Partido', partido_opt)
     escolaridade = st.sidebar.selectbox('Escolaridade', escolaridade_opt)
     receita = st.sidebar.number_input('Receita mensal bruta')
-    despesa = st.sidebar.number_input('Desepesa total com campanha')
+    despesa = st.sidebar.number_input('Despesa total com campanha')
     submitted = st.form_submit_button(label='Submeter')
 
 if submitted:
